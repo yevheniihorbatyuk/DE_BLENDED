@@ -15,9 +15,9 @@ class KafkaInitiator:
         with open(config_path, 'r') as file:
             self.config = yaml.safe_load(file)
         
-        # self._setup_logging()
-        # self._setup_kafka_consumer()
-        # self._setup_kafka_producer()
+        self._setup_logging()
+        self._setup_kafka_consumer()
+        self._setup_kafka_producer()
         
     def _setup_logging(self):
         """Configure logging"""

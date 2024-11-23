@@ -10,10 +10,20 @@ from configs import kafka_config
 
 initiator = KafkaInitiator('BLENDED/blended_3/config.yaml')
 
+# Створення Kafka Producer
+producer = KafkaProducer(
+    bootstrap_servers=kafka_config['bootstrap_servers'],
+    security_protocol=kafka_config['security_protocol'],
+    sasl_mechanism=kafka_config['sasl_mechanism'],
+    sasl_plain_username=kafka_config['username'],
+    sasl_plain_password=kafka_config['password'],
+    value_serializer=lambda v: json.dumps(v).encode('utf-8'),
+    key_serializer=lambda v: json.dumps(v).encode('utf-8')
+)
 
 # Конфігурація
 BINANCE_WS_URL =  initiator.config['binance'].get('websocket_url',  "wss://stream.binance.com:9443/ws")
-CURRENCIES = ["btcusdt", "ethusdt", "bnbusdt"]  # Вибір валют
+CURRENCIES = [ "ethusdt", ]  # Вибір валют
 
 
 async def binance_ws_client():
@@ -45,7 +55,8 @@ async def binance_ws_client():
             }
 
             # Надсилання повідомлення до Kafka
-
+            producer.send('currency_raw_data', key=str(uuid.uuid4()), value=data)
+            producer.flush()
             print(f"Message {i} sent to topic '{topic_name}' successfully. {data}")
             i += 1
 
