@@ -20,7 +20,7 @@ producer = KafkaProducer(
 
 topic_name = "building_sensors_greenmoon"
 
-sensor_id = random.randint(1, 100)
+sensor_id = random.randint(1, 5)
 
 for i in range(99999):
     try:
@@ -30,6 +30,7 @@ for i in range(99999):
             "temperature": random.randint(25, 45),
             "humidity": random.randint(15, 85)
         }
+        
         producer.send(topic_name, key=str(uuid.uuid4()), value=data)
         producer.flush()
         print(f"Message {i} sent to topic '{topic_name}' successfully.")
@@ -38,3 +39,5 @@ for i in range(99999):
         print(f"An error occurred: {e}")
 
 producer.close()
+
+
