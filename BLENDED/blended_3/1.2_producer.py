@@ -23,7 +23,7 @@ producer = KafkaProducer(
 
 # Конфігурація
 BINANCE_WS_URL =  initiator.config['binance'].get('websocket_url',  "wss://stream.binance.com:9443/ws")
-CURRENCIES = [ "ethusdt", ]  # Вибір валют
+CURRENCIES = ["ethusdt", 'btcusdt', 'xrpusdt']  # Вибір валют
 
 
 async def binance_ws_client():

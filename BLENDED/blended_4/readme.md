@@ -1,0 +1,1 @@
+curl -X POST   -F "file=@requirements.txt"   https://load-dag-135714666888.us-central1.run.app
