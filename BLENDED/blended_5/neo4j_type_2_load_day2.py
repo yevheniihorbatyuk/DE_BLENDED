@@ -10,7 +10,7 @@ NEO4J_URI = os.getenv("NEO4J_URI", "bolt://localhost:7687")
 NEO4J_USER = os.getenv("NEO4J_USER", "neo4j")
 NEO4J_PASSWORD = os.getenv("NEO4J_PASSWORD", "neo4jratatui")
 
-DAY2_FILE = "BLENDED/blended_5/data/day2_changes.csv"
+DAY2_FILE = os.getenv('DAY_CHANGE')  # Replace with your input file
 TODAY = str(date.today())
 
 driver = GraphDatabase.driver(NEO4J_URI, auth=(NEO4J_USER, NEO4J_PASSWORD))
@@ -25,21 +25,23 @@ def apply_scd_type2():
             customer_id = int(row['customer_id'])
             full_name_new = row['full_name']
             email_new = row['email']
+            phone_new = row['phone']
             city_new = row['city']
-            sign_up_date_new = row['sign_up_date']  # зазвичай це не змінюється, але зберігаємо як є
+            address_new = row['address']
+            status_new = row['status']
+            age_new = int(row['age'])
+            subscription_type_new = row['subscription_type']
 
-            # Отримуємо поточну версію
-            # current_version: найдемо version з is_current=true для даного customer_id
             result = session.run("""
             MATCH (m:CustomerSCD2Main {customer_id: $customer_id})-[:HAS_VERSION]->(v:CustomerSCD2Version {is_current:true})
-            RETURN v.email AS email_old, v.city AS city_old, v.sign_up_date AS sign_up_date_old, v.full_name AS full_name_old, v
+            RETURN v.email AS email_old, v.phone AS phone_old, v.city AS city_old, 
+                   v.address AS address_old, v.status AS status_old,
+                   v.subscription_type AS subscription_type_old, v
             """, customer_id=customer_id)
 
             record = result.single()
 
             if record is None:
-                # Нема поточної версії - новий клієнт?
-                # Створимо main і version
                 session.run("""
                 MERGE (m:CustomerSCD2Main {customer_id: $customer_id})
                 ON CREATE SET m.created_at = datetime()
@@ -47,46 +49,57 @@ def apply_scd_type2():
                 CREATE (v:CustomerSCD2Version {
                     full_name: $full_name,
                     email: $email,
+                    phone: $phone,
                     city: $city,
+                    address: $address,
+                    status: $status,
                     sign_up_date: date($sign_up_date),
+                    age: $age,
+                    subscription_type: $subscription_type,
                     valid_from: date($sign_up_date),
                     valid_to: NULL,
                     is_current: true
                 })
                 MERGE (m)-[:HAS_VERSION]->(v)
-                """, 
-                customer_id=customer_id, full_name=full_name_new, email=email_new, city=city_new, sign_up_date=sign_up_date_new)
+                """,
+                customer_id=customer_id, full_name=full_name_new, email=email_new,
+                phone=phone_new, city=city_new, address=address_new,
+                status=status_new, sign_up_date=row['sign_up_date'], age=age_new,
+                subscription_type=subscription_type_new)
                 print(f"Inserted new customer_id={customer_id} as new SCD2 version.")
             else:
-                email_old = record["email_old"]
-                city_old = record["city_old"]
-                full_name_old = record["full_name_old"]
-                sign_up_date_old = record["sign_up_date_old"]
-                current_version_node = record["v"]  # містить id для подальшого оновлення
-                
-                changes = (email_old != email_new) or (city_old != city_new)
+                changes = any(
+                    record[field] != row[field]
+                    for field in ['email_old', 'phone_old', 'city_old', 
+                                  'address_old', 'status_old', 'subscription_type_old']
+                )
 
                 if changes:
-                    # Оновлюємо стару версію: is_current=false, valid_to=TODAY
-                    # Створюємо нову версію з актуальними даними
                     session.run("""
                     MATCH (m:CustomerSCD2Main {customer_id: $customer_id})-[:HAS_VERSION]->(v:CustomerSCD2Version {is_current:true})
                     SET v.is_current = false,
                         v.valid_to = date($today)
                     
                     CREATE (v2:CustomerSCD2Version {
-                        full_name: $full_name_new,
-                        email: $email_new,
-                        city: $city_new,
-                        sign_up_date: date($sign_up_date_old),
+                        full_name: $full_name,
+                        email: $email,
+                        phone: $phone,
+                        city: $city,
+                        address: $address,
+                        status: $status,
+                        sign_up_date: date($sign_up_date),
+                        age: $age,
+                        subscription_type: $subscription_type,
                         valid_from: date($today),
                         valid_to: NULL,
                         is_current: true
                     })
                     MERGE (m)-[:HAS_VERSION]->(v2)
                     """, customer_id=customer_id, today=TODAY, 
-                    full_name_new=full_name_new, email_new=email_new, city_new=city_new,
-                    sign_up_date_old=str(sign_up_date_old))  # sign_up_date_old приводимо до str
+                    full_name=full_name_new, email=email_new, phone=phone_new,
+                    city=city_new, address=address_new, status=status_new,
+                    sign_up_date=row['sign_up_date'], age=age_new,
+                    subscription_type=subscription_type_new)
 
                     print(f"SCD Type 2 Update for customer_id={customer_id}")
                 else:

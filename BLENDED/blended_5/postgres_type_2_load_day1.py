@@ -3,16 +3,20 @@ import csv
 import psycopg2
 from dotenv import load_dotenv
 
+# Load environment variables
 load_dotenv()
 
-POSTGRES_HOST = os.getenv("POSTGRES_HOST", "localhost")
-POSTGRES_USER = os.getenv("POSTGRES_USER", "nastradamus")
-POSTGRES_PASSWORD = os.getenv("POSTGRES_PASSWORD", "ratatui1212332211")
-POSTGRES_DB = os.getenv("POSTGRES_DB", "baza")
+# Database configuration
+POSTGRES_HOST = os.getenv("POSTGRES_HOST", "139.162.133.152")
+POSTGRES_USER = os.getenv("POSTGRES_USER", "postgres")
+POSTGRES_PASSWORD = os.getenv("POSTGRES_PASSWORD", "password")
+POSTGRES_DB = os.getenv("POSTGRES_DB", "customer_db")
 POSTGRES_PORT = os.getenv("POSTGRES_PORT", "5432")
 
-DAY1_FILE = "BLENDED/blended_5/data/day1_customers.csv"
+# File containing customer data
+DATA_FILE = os.getenv("DAY_INIT")
 
+# Establish database connection
 connection = psycopg2.connect(
     host=POSTGRES_HOST,
     port=POSTGRES_PORT,
@@ -22,16 +26,24 @@ connection = psycopg2.connect(
 )
 
 def create_table():
+    """
+    Create table for customer data with support for SCD Type 2.
+    """
     create_table_sql = """
     CREATE TABLE IF NOT EXISTS dim_customers (
-        customer_id INT,
-        full_name TEXT,
-        email TEXT,
+        customer_id INT NOT NULL,
+        full_name TEXT NOT NULL,
+        email TEXT NOT NULL,
+        phone TEXT,
         city TEXT,
-        sign_up_date DATE,
-        valid_from DATE,
+        address TEXT,
+        status TEXT,
+        sign_up_date DATE NOT NULL,
+        age INT,
+        subscription_type TEXT,
+        valid_from DATE NOT NULL,
         valid_to DATE,
-        is_current BOOLEAN,
+        is_current BOOLEAN NOT NULL,
         PRIMARY KEY (customer_id, valid_from)
     );
     """
@@ -39,31 +51,40 @@ def create_table():
         cur.execute(create_table_sql)
     connection.commit()
 
-def load_day1_data():
-    with open(DAY1_FILE, 'r', encoding='utf-8') as f:
+def load_data():
+    """
+    Load customer data from the CSV file into the database.
+    """
+    with open(DATA_FILE, 'r', encoding='utf-8') as f:
         reader = csv.DictReader(f)
         rows = list(reader)
 
     insert_sql = """
-    INSERT INTO dim_customers (customer_id, full_name, email, city, sign_up_date, valid_from, valid_to, is_current)
-    VALUES (%s, %s, %s, %s, %s, %s, NULL, TRUE)
+    INSERT INTO dim_customers (
+        customer_id, full_name, email, phone, city, address, status,
+        sign_up_date, age, subscription_type, valid_from, valid_to, is_current
+    )
+    VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, NULL, TRUE)
     ON CONFLICT (customer_id, valid_from) DO NOTHING;
     """
     with connection.cursor() as cur:
         for row in rows:
-            # valid_from = sign_up_date (з першого дня)
             cur.execute(insert_sql, (
-                row['customer_id'],
+                int(row['customer_id']),
                 row['full_name'],
                 row['email'],
+                row['phone'],
                 row['city'],
+                row['address'],
+                row['status'],
                 row['sign_up_date'],
-                row['sign_up_date']  # Для SCD Type 2, перший запис valid_from = sign_up_date
+                int(row['age']),
+                row['subscription_type'],
+                row['sign_up_date']  # valid_from is set to sign_up_date for initial load
             ))
     connection.commit()
 
-
 if __name__ == "__main__":
     create_table()
-    load_day1_data()
-    print("Day 1 data loaded into dim_customers.")
+    load_data()
+    print("Customer data loaded into dim_customers.")

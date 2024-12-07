@@ -11,7 +11,7 @@ POSTGRES_PASSWORD = os.getenv("POSTGRES_PASSWORD", "ratatui1212332211")
 POSTGRES_DB = os.getenv("POSTGRES_DB", "baza")
 POSTGRES_PORT = os.getenv("POSTGRES_PORT", "5432")
 
-DAY1_FILE = "BLENDED/blended_5/data/day1_customers.csv"
+DAY1_FILE = os.getenv('DAY_INIT')  # Replace with the correct CSV filename
 
 connection = psycopg2.connect(
     host=POSTGRES_HOST,
@@ -28,9 +28,14 @@ def create_table():
         full_name TEXT,
         email TEXT,
         previous_email TEXT,
+        phone TEXT,
         city TEXT,
         previous_city TEXT,
+        address TEXT,
+        status TEXT,
         sign_up_date DATE,
+        age INT,
+        subscription_type TEXT,
         last_update_date DATE
     );
     """
@@ -44,21 +49,27 @@ def load_day1_data():
         rows = list(reader)
 
     insert_sql = """
-    INSERT INTO dim_customers_scd3 (customer_id, full_name, email, previous_email, city, previous_city, sign_up_date, last_update_date)
-    VALUES (%s, %s, %s, NULL, %s, NULL, %s, %s)
+    INSERT INTO dim_customers_scd3 (
+        customer_id, full_name, email, previous_email, phone, city, previous_city, 
+        address, status, sign_up_date, age, subscription_type, last_update_date
+    )
+    VALUES (%s, %s, %s, NULL, %s, %s, NULL, %s, %s, %s, %s, %s, %s)
     ON CONFLICT (customer_id) DO NOTHING;
     """
     with connection.cursor() as cur:
         for row in rows:
-            # При першому завантаженні previous_email та previous_city = NULL
-            # last_update_date = sign_up_date (початкове завантаження)
             cur.execute(insert_sql, (
                 row['customer_id'],
                 row['full_name'],
                 row['email'],
+                row['phone'],
                 row['city'],
+                row['address'],
+                row['status'],
                 row['sign_up_date'],
-                row['sign_up_date']
+                row['age'],
+                row['subscription_type'],
+                row['sign_up_date']  # Initial load: last_update_date = sign_up_date
             ))
     connection.commit()
 
