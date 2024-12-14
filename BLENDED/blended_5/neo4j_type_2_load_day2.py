@@ -41,7 +41,18 @@ def apply_scd_type2():
 
             record = result.single()
 
+            # Handle missing fields gracefully
             if record is None:
+                record = {}  # No existing version
+
+            email_old = record.get('email_old', None)
+            phone_old = record.get('phone_old', None)
+            city_old = record.get('city_old', None)
+            address_old = record.get('address_old', None)
+            status_old = record.get('status_old', None)
+            subscription_type_old = record.get('subscription_type_old', None)
+
+            if record == {}:  # Insert new version if no record exists
                 session.run("""
                 MERGE (m:CustomerSCD2Main {customer_id: $customer_id})
                 ON CREATE SET m.created_at = datetime()
@@ -68,10 +79,14 @@ def apply_scd_type2():
                 subscription_type=subscription_type_new)
                 print(f"Inserted new customer_id={customer_id} as new SCD2 version.")
             else:
-                changes = any(
-                    record[field] != row[field]
-                    for field in ['email_old', 'phone_old', 'city_old', 
-                                  'address_old', 'status_old', 'subscription_type_old']
+                # Detect changes
+                changes = (
+                    email_old != email_new or
+                    phone_old != phone_new or
+                    city_old != city_new or
+                    address_old != address_new or
+                    status_old != status_new or
+                    subscription_type_old != subscription_type_new
                 )
 
                 if changes:
@@ -104,6 +119,7 @@ def apply_scd_type2():
                     print(f"SCD Type 2 Update for customer_id={customer_id}")
                 else:
                     print(f"No changes for customer_id={customer_id}, no SCD2 update needed.")
+
 
 if __name__ == "__main__":
     apply_scd_type2()
