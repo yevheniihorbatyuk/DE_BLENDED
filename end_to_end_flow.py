@@ -132,5 +132,5 @@ def etl_pipeline():
     process_silver_to_gold()
 
 if __name__ == "__main__":
-    etl_pipeline.visualize()
-    # etl_pipeline.serve(name="etl_pipeline", cron="*/10 * * * *")
+    # etl_pipeline.visualize()
+    etl_pipeline.serve(name="etl_pipeline", cron="*/10 * * * *")

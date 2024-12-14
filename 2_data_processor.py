@@ -238,34 +238,45 @@ class SparkKafkaProcessor:
         )
 
     def _start_streaming(self, df: DataFrame, topic_prefix: str) -> None:
-        """Start the streaming job with proper error handling."""
+        """Start the streaming job with proper error handling and console output."""
         def foreach_batch_function(batch_df: DataFrame, epoch_id: int) -> None:
             try:
                 # Write to Kafka
                 self.write_to_kafka(batch_df, f"{topic_prefix}_enriched_athlete_avg")
-                
+
                 # Write to MySQL
                 (batch_df.write
-                 .format("jdbc")
-                 .options(
-                     url="jdbc:mysql://217.61.57.46:3306/neo_data",
-                     driver=self.mysql_config.driver,
-                     dbtable=f"{topic_prefix}_enriched_athlete_avg",
-                     user=self.mysql_config.user,
-                     password=self.mysql_config.password
-                 )
-                 .mode("append")
-                 .save())
+                .format("jdbc")
+                .options(
+                    url="jdbc:mysql://217.61.57.46:3306/neo_data",
+                    driver=self.mysql_config.driver,
+                    dbtable=f"{topic_prefix}_enriched_athlete_avg",
+                    user=self.mysql_config.user,
+                    password=self.mysql_config.password
+                )
+                .mode("append")
+                .save())
+
+                logger.info(f"Batch processed successfully for epoch {epoch_id}.")
             except Exception as e:
                 logger.error(f"Error in batch processing (epoch {epoch_id}): {str(e)}")
                 raise
 
+        # Streaming to console output
         (df.writeStream
-         .outputMode("complete")
-         .foreachBatch(foreach_batch_function)
-         .option("checkpointLocation", os.path.join(self.checkpoint_dir, "streaming"))
-         .start()
-         .awaitTermination())
+        .outputMode("complete")  # Use 'complete' or 'append' depending on requirements
+        .format("console")
+        .option("truncate", "false")  # Full output without truncation
+        .option("numRows", 50)  # Number of rows to display
+        .start())
+
+        # Main streaming logic with foreachBatch
+        (df.writeStream
+        .outputMode("complete")
+        .foreachBatch(foreach_batch_function)
+        .option("checkpointLocation", os.path.join(self.checkpoint_dir, "streaming"))
+        .start()
+        .awaitTermination())
 
 def main():
     """Main entry point."""
