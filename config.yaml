@@ -1,0 +1,52 @@
+# Kafka Configuration
+kafka:
+  bootstrap_servers: ['77.81.230.104:9092']
+  producer_config:
+    security_protocol: SASL_PLAINTEXT
+    sasl_mechanism: PLAIN
+    sasl_plain_username: admin
+    sasl_plain_password: VawEzo1ikLtrA8Ug8THa
+    retries: 3
+    acks: 'all'
+  consumer_config:
+    security_protocol: 'SASL_PLAINTEXT'
+    sasl_mechanism: 'PLAIN'
+    sasl_plain_username: 'admin'
+    sasl_plain_password: 'VawEzo1ikLtrA8Ug8THa'
+    auto_offset_reset: 'earliest'
+    enable_auto_commit: 'latest'
+    group_id: 'my_consumer_group_1'
+
+
+# Topics Configuration
+topics:
+  raw_data: 'currency_raw_data'
+  currency_pairs:
+    - symbol: 'BTCUSDT'
+      topic: 'currency_btcusdt'
+    - symbol: 'ETHUSDT'
+      topic: 'currency_ethusdt'
+    - symbol: 'XRPUSDT'
+      topic: 'currency_xrpusdt'
+
+# Binance WebSocket Configuration
+binance:
+  websocket_url: 'wss://stream.binance.com:9443/ws'
+  symbols:
+    - 'btcusdt@trade'
+    - 'ethusdt@trade'
+    - 'xrpusdt@trade'
+
+# Spark Configuration
+spark:
+  app_name: 'currencyStreamProcessor'
+  master: 'local[*]'
+  checkpoint_location: '/tmp/spark-checkpoint'
+  window_duration: '1 minute'
+  slide_duration: '1 minute'
+
+# Logging Configuration
+logging:
+  level: 'INFO'
+  format: '%(asctime)s - %(name)s - %(levelname)s - %(message)s'
+  file: 'currency_stream.log'

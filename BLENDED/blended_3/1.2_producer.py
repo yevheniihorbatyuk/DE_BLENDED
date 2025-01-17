@@ -23,7 +23,7 @@ producer = KafkaProducer(
 
 # Конфігурація
 BINANCE_WS_URL =  initiator.config['binance'].get('websocket_url',  "wss://stream.binance.com:9443/ws")
-CURRENCIES = ["ethusdt", 'btcusdt', 'xrpusdt']  # Вибір валют
+CURRENCIES = ['xrpusdt']  # Вибір валют
 
 
 async def binance_ws_client():
@@ -60,7 +60,7 @@ async def binance_ws_client():
             print(f"Message {i} sent to topic '{topic_name}' successfully. {data}")
             i += 1
 
-            time.sleep(0.3)
+            time.sleep(1)
             
             
 if __name__ == "__main__":
