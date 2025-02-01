@@ -20,6 +20,9 @@ logging.basicConfig(
 )
 logger = logging.getLogger(__name__)
 
+os.environ['PYSPARK_SUBMIT_ARGS'] = '--packages org.apache.spark:spark-streaming-kafka-0-10_2.12:3.5.1,org.apache.spark:spark-sql-kafka-0-10_2.12:3.5.1 pyspark-shell'
+
+
 @dataclass
 class KafkaConfig:
     """Kafka configuration settings."""

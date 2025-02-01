@@ -4,43 +4,57 @@ from pyspark.sql.functions import col, trim, lower
 from pyspark.sql.types import StringType
 import os
 
-@task
-def clean_text(df):
-    """Clean text columns by trimming whitespace and converting to lowercase."""
+def create_spark_session():
+    """Створює та повертає SparkSession."""
+    return SparkSession.builder \
+        .appName("BronzeToSilver") \
+        .getOrCreate()
+
+@task(cache_policy="NO_CACHE")
+def clean_text(table: str):
+    """Очищає текстові колонки у таблиці."""
+    spark = create_spark_session()
+    input_path = f"/tmp/bronze/{table}"
+    
+    # Читаємо таблицю
+    df = spark.read.parquet(input_path)
+
+    # Очистка текстових колонок
     for column in df.columns:
         if df.schema[column].dataType == StringType():
             df = df.withColumn(column, trim(lower(col(column))))
+
     return df
 
-@task
-def process_table(table):
-    """Process a single table: clean text, drop duplicates, and save to silver layer."""
-    spark = SparkSession.builder.appName("BronzeToSilver").getOrCreate()
+@task(cache_policy="NO_CACHE")
+def process_table(table: str):
+    """Обробляє таблицю: очищає текст, видаляє дублі та зберігає у silver."""
+    spark = create_spark_session()
 
-    # Read the table from the bronze layer
+    # Читаємо таблицю
     input_path = f"/tmp/bronze/{table}"
     df = spark.read.parquet(input_path)
 
-    # Clean text and drop duplicates
-    df = clean_text(df)
+    # Викликаємо очищення
+    df = clean_text(table)
+
+    # Видаляємо дублі
     df = df.dropDuplicates()
 
-    # Save the cleaned data to the silver layer
+    # Зберігаємо у Silver
     output_path = f"/tmp/silver/{table}"
     os.makedirs(output_path, exist_ok=True)
     df.write.mode("overwrite").parquet(output_path)
 
-    print(f"Data saved to {output_path}")
+    print(f"✅ Дані збережено у {output_path}")
 
-    # Optional: Re-read and verify
+    # Перевіряємо результат
     df = spark.read.parquet(output_path)
     df.show(truncate=False)
 
-    spark.stop()
-
 @flow
 def bronze_to_silver():
-    """Main flow to process tables from bronze to silver."""
+    """Обробляє всі таблиці з bronze до silver."""
     tables = ["athlete_bio", "athlete_event_results"]
 
     for table in tables:

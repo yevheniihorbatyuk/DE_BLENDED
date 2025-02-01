@@ -5,7 +5,7 @@ from pyspark.sql.functions import (
 )
 from pyspark.sql.types import (
     StructType, StringType, IntegerType, 
-    LongType, TimestampType
+    LongType, TimestampType, StructField
 )
 import os
 from dataclasses import dataclass
@@ -18,6 +18,10 @@ logging.basicConfig(
     format='%(asctime)s - %(levelname)s - %(message)s'
 )
 logger = logging.getLogger(__name__)
+
+
+os.environ['PYSPARK_SUBMIT_ARGS'] = '--packages org.apache.spark:spark-streaming-kafka-0-10_2.12:3.5.1,org.apache.spark:spark-sql-kafka-0-10_2.12:3.5.1 pyspark-shell'
+
 
 @dataclass
 class KafkaConfig:
@@ -77,16 +81,16 @@ class MySQLConfig:
 def get_table_names() -> dict:
     """Get table names configuration"""
     return {
-        "athletes": "athletes_data",
-        "results": "event_results",
-        "aggregated": "ivan_y.aggregated_results"
+        "athletes": "athlete_bio",
+        "results": "athlete_event_results",
+        "aggregated": "greenmoon.aggregated_results"
     }
 
 def create_spark_session(mysql_config: MySQLConfig):
     """Create and configure Spark session"""
     return SparkSession.builder \
         .appName("ML Data Streaming Pipeline") \
-        .config("spark.jars", "/path/to/mysql-connector-java.jar") \
+        .config("spark.jars", "mysql-connector-j-8.3.0.jar") \
         .config("spark.streaming.kafka.maxRatePerPartition", "100") \
         .config("spark.streaming.backpressure.enabled", "true") \
         .config("spark.sql.streaming.checkpointLocation", "/tmp/checkpoint") \

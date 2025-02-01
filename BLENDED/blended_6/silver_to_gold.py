@@ -3,7 +3,7 @@ from pyspark.sql import SparkSession
 from pyspark.sql.functions import avg, current_timestamp
 import os
 
-@task
+@task(cache_policy="NO_CACHE")
 def process_silver_to_gold():
     """Process data from silver to gold layer."""
     spark = SparkSession.builder.appName("SilverToGold").getOrCreate()
